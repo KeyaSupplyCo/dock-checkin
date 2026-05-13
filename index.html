@@ -530,10 +530,18 @@ function setSyncStatus(txt,color='var(--text3)'){
 // API CALLS
 // ═══════════════════════════════════════════════════
 async function api(params){
-  const url=new URL(API);
-  Object.entries(params).forEach(([k,v])=>url.searchParams.set(k,v));
-  const res=await fetch(url.toString());
-  return res.json();
+  // Add cache-busting timestamp
+  const p = {...params, _t: Date.now()};
+  const url = new URL(API);
+  Object.entries(p).forEach(([k,v]) => url.searchParams.set(k, v));
+  const res = await fetch(url.toString(), {
+    method: 'GET',
+    cache: 'no-store',
+    headers: { 'Accept': 'application/json' }
+  });
+  const text = await res.text();
+  try { return JSON.parse(text); }
+  catch(e) { console.error('API parse error:', text); throw new Error('Invalid response from server'); }
 }
 
 function withUser(params){
@@ -547,16 +555,19 @@ document.getElementById('loginPass').addEventListener('keydown',e=>{ if(e.key===
 document.getElementById('loginUser').addEventListener('keydown',e=>{ if(e.key==='Enter') document.getElementById('loginPass').focus(); });
 
 async function doLogin(){
-  const username=document.getElementById('loginUser').value.trim();
-  const password=document.getElementById('loginPass').value;
+  const username = document.getElementById('loginUser').value.trim();
+  const password = document.getElementById('loginPass').value;
   if(!username||!password){ showLoginErr('Please enter username and password.'); return; }
   loading(true,'Signing in…');
+  document.getElementById('loginErr').style.display='none';
   try{
-    const hash=await sha256(password);
-    const res=await api({action:'login',username,passwordHash:hash});
+    const hash = await sha256(password);
+    console.log('Attempting login:', username, 'hash:', hash);
+    const res = await api({action:'login', username, passwordHash: hash});
+    console.log('Login response:', JSON.stringify(res));
     if(res.ok){
-      currentUser={username:res.username,displayName:res.displayName,role:res.role};
-      sessionStorage.setItem('dockUser',JSON.stringify(currentUser));
+      currentUser = {username: res.username, displayName: res.displayName, role: res.role};
+      sessionStorage.setItem('dockUser', JSON.stringify(currentUser));
       document.getElementById('loginScreen').style.display='none';
       document.getElementById('appWrap').style.display='flex';
       await loadAllData();
@@ -564,7 +575,10 @@ async function doLogin(){
     } else {
       showLoginErr(res.error||'Invalid username or password.');
     }
-  } catch(e){ showLoginErr('Connection error. Please try again.'); }
+  } catch(e){
+    console.error('Login error:', e);
+    showLoginErr('Connection error: '+e.message);
+  }
   loading(false);
 }
 
