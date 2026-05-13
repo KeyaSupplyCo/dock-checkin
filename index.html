@@ -646,20 +646,17 @@ function parseTruck(t){
   function extractTime(val){
     if(!val) return '00:00';
     const s = val.toString().trim();
-    // Already HH:MM format
-    if(/^\d{1,2}:\d{2}$/.test(s)) return s.padStart(5,'0').slice(0,5);
-    // Try to parse as date and extract time
-    try{
-      const d = new Date(s);
-      if(!isNaN(d)){
-        const h = d.getHours().toString().padStart(2,'0');
-        const m = d.getMinutes().toString().padStart(2,'0');
-        return `${h}:${m}`;
-      }
-    }catch(e){}
-    // Try regex match for HH:MM anywhere in string
-    const match = s.match(/(\d{1,2}):(\d{2})/);
-    if(match) return `${match[1].padStart(2,'0')}:${match[2]}`;
+    // Already clean HH:MM format
+    if(/^\d{1,2}:\d{2}$/.test(s)){
+      const parts=s.split(':');
+      return parts[0].padStart(2,'0')+':'+parts[1];
+    }
+    // Extract HH:MM from full date string using regex
+    // Matches patterns like "08:00:00" and takes first HH:MM
+    const match = s.match(/(\d{1,2}):(\d{2})(?::\d{2})?/);
+    if(match){
+      return match[1].padStart(2,'0')+':'+match[2];
+    }
     return '00:00';
   }
 
@@ -740,12 +737,11 @@ function renderCal(){
       .map(tk=>({...tk,sm:timeToMins(tk.start),em:timeToMins(tk.end)}));
     let evts='';
     trucks.forEach(tk=>{
-      // Find trucks that genuinely overlap in time with this truck
-      const overlaps=trucks.filter(o=>o.sm < tk.em && o.em > tk.sm);
-      const col = overlaps.findIndex(o=>o.id===tk.id);
-      const cols = overlaps.length;
-      const wPct = 100/cols;
-      const lPct = col*wPct;
+      const overlaps=trucks.filter(o=>o.sm<tk.em&&o.em>tk.sm);
+      const col=overlaps.indexOf(tk);
+      const cols=overlaps.length;
+      const wPct=100/cols;
+      const lPct=col*wPct;
       const top=tk.sm*PX, h=Math.max((tk.em-tk.sm)*PX-2,18);
       const sess=openSess(tk.id,dk);
       const isIn=!!sess, over=isIn&&new Date()>new Date(dk+'T'+tk.end+':00');
@@ -759,7 +755,7 @@ function renderCal(){
       const doorLbl=sess&&sess.door?` · ${sess.door}`:'';
       const showBtn=isTd&&!hol&&cols===1;
       const showDot=isTd&&!hol&&cols>1;
-      evts+=`<div style="position:absolute;top:${top}px;left:calc(${lPct}%+2px);width:calc(${wPct}%-4px);height:${h}px;
+      evts+=`<div style="position:absolute;top:${top}px;left:calc(${lPct}% + 2px);width:calc(${wPct}% - 4px);height:${h}px;
         background:${bg};border:1.5px solid ${brd};color:${tc};border-radius:5px;
         padding:3px 7px;display:flex;align-items:center;gap:5px;overflow:hidden;
         box-shadow:0 1px 4px rgba(0,0,0,.1);cursor:pointer;opacity:${isTd?1:.52};z-index:3;"
