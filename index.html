@@ -243,7 +243,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
     <button class="nav-tab" onclick="showView('log',this)"><i class="ti ti-list"></i> Session Log</button>
     <button class="nav-tab" onclick="showView('audit',this)" id="auditTab" style="display:none"><i class="ti ti-clipboard-list"></i> Audit</button>
   </div>
-  <div style="font-size:11px;color:var(--text3)" id="syncStatus">⚡ Live</div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span style="font-size:11px;color:var(--text3)" id="syncStatus">⚡ Live</span>
+    <button class="btn btn-sm" onclick="silentSync()" title="Refresh data" style="padding:3px 8px;font-size:11px"><i class="ti ti-refresh"></i> Sync</button>
+  </div>
 </div>
 
 <!-- CAL HEADER -->
@@ -265,7 +268,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   </div>
 </div>
 
-<div id="v-ana" style="display:none;padding:20px;overflow:auto;flex:1">
+<div id="v-ana" style="display:none;padding:20px;overflow-y:auto;overflow-x:hidden;flex:1;flex-direction:column">
   <div class="sg" id="statGrid"></div>
   <div class="ana-wrap">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
@@ -280,7 +283,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   </div>
 </div>
 
-<div id="v-log" style="display:none;padding:20px;overflow:auto;flex:1">
+<div id="v-log" style="display:none;padding:20px;overflow-y:auto;overflow-x:hidden;flex:1;flex-direction:column">
   <div class="log-wrap">
     <div class="log-tb">
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
@@ -299,7 +302,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   </div>
 </div>
 
-<div id="v-audit" style="display:none;padding:20px;overflow:auto;flex:1">
+<div id="v-audit" style="display:none;padding:20px;overflow-y:auto;overflow-x:hidden;flex:1;flex-direction:column">
   <div class="log-wrap">
     <div class="log-tb">
       <span class="section-label">Audit Trail</span>
@@ -682,17 +685,57 @@ function applyConfig(){
 function showView(v,btn){
   document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
   btn.classList.add('active');
+  // Hide all views
   ['v-cal','v-ana','v-log','v-audit'].forEach(id=>{
     const el=document.getElementById(id);
-    if(el) el.style.display='none';
+    if(el){ el.style.display='none'; el.style.flexDirection=''; }
   });
-  document.getElementById('calHdr').style.display=v==='calendar'?'flex':'none';
-  const vEl=document.getElementById('v-'+v);
-  if(vEl) vEl.style.display='flex';
-  if(vEl&&v!=='calendar') vEl.style.flexDirection='column';
+  document.getElementById('calHdr').style.display = v==='calendar'?'flex':'none';
+  const vEl = document.getElementById('v-'+v);
+  if(!vEl) return;
+  // Calendar needs block (it has its own internal layout)
+  // Other views need flex+column for proper scrolling
+  if(v==='calendar'){
+    vEl.style.display='block';
+  } else {
+    vEl.style.display='flex';
+    vEl.style.flexDirection='column';
+  }
   if(v==='analytics') renderAna();
   if(v==='log') renderLog();
-  if(v==='audit'){ loadAuditLogs(); }
+  if(v==='audit') loadAuditLogs();
+  // Always re-render calendar when switching back to it
+  if(v==='calendar') renderCal();
+}
+
+// ── SILENT BACKGROUND SYNC ────────────────────────
+// Syncs data without showing loading overlay or disrupting UI
+async function silentSync(){
+  if(!currentUser) return;
+  try{
+    const res = await api({action:'getAll'});
+    S.trucks        = (res.trucks||[]).map(parseTruck);
+    S.sessions      = res.sessions||[];
+    S.holidays      = res.holidays||[];
+    S.cancellations = res.cancellations||[];
+    S.doors         = res.doors||[];
+    S.config        = res.config||{};
+    applyConfig();
+    setSyncStatus('⚡ Live','var(--green)');
+    // Re-render current view silently
+    const activeTab = document.querySelector('.nav-tab.active');
+    if(activeTab){
+      const label = activeTab.textContent.trim().toLowerCase();
+      if(label.includes('calendar')) renderCal();
+      else if(label.includes('analytics')) renderAna();
+      else if(label.includes('log')) renderLog();
+    } else {
+      renderCal();
+    }
+    updStatus();
+  } catch(e){
+    setSyncStatus('⚠ Offline','var(--red)');
+  }
 }
 
 // ═══════════════════════════════════════════════════
@@ -1388,7 +1431,6 @@ async function changePassword(){
 // ═══════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════
-// Check for existing session
 (function(){
   const saved=sessionStorage.getItem('dockUser');
   if(saved){
@@ -1403,8 +1445,10 @@ async function changePassword(){
 })();
 
 setDir('Inbound');
-setInterval(updStatus,60000);
-setInterval(()=>{ if(currentUser){ loadAllData(); } },5*60*1000); // refresh every 5 min
+// Update status bar every minute
+setInterval(updStatus, 60000);
+// Silent background sync every 30 seconds — keeps all devices in sync
+setInterval(silentSync, 30000);
 </script>
 </body>
 </html>
