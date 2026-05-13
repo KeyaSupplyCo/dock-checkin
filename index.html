@@ -683,9 +683,9 @@ function applyConfig(){
 // VIEWS
 // ═══════════════════════════════════════════════════
 function showView(v,btn){
+  currentView = v;
   document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
   btn.classList.add('active');
-  // Hide all views
   ['v-cal','v-ana','v-log','v-audit'].forEach(id=>{
     const el=document.getElementById(id);
     if(el){ el.style.display='none'; el.style.flexDirection=''; }
@@ -693,23 +693,22 @@ function showView(v,btn){
   document.getElementById('calHdr').style.display = v==='calendar'?'flex':'none';
   const vEl = document.getElementById('v-'+v);
   if(!vEl) return;
-  // Calendar needs block (it has its own internal layout)
-  // Other views need flex+column for proper scrolling
   if(v==='calendar'){
     vEl.style.display='block';
+    renderCal();
   } else {
     vEl.style.display='flex';
     vEl.style.flexDirection='column';
+    if(v==='analytics') renderAna();
+    else if(v==='log') renderLog();
+    else if(v==='audit') loadAuditLogs();
   }
-  if(v==='analytics') renderAna();
-  if(v==='log') renderLog();
-  if(v==='audit') loadAuditLogs();
-  // Always re-render calendar when switching back to it
-  if(v==='calendar') renderCal();
 }
 
+// Track which view is currently active
+let currentView = 'calendar';
+
 // ── SILENT BACKGROUND SYNC ────────────────────────
-// Syncs data without showing loading overlay or disrupting UI
 async function silentSync(){
   if(!currentUser) return;
   try{
@@ -722,16 +721,10 @@ async function silentSync(){
     S.config        = res.config||{};
     applyConfig();
     setSyncStatus('⚡ Live','var(--green)');
-    // Re-render current view silently
-    const activeTab = document.querySelector('.nav-tab.active');
-    if(activeTab){
-      const label = activeTab.textContent.trim().toLowerCase();
-      if(label.includes('calendar')) renderCal();
-      else if(label.includes('analytics')) renderAna();
-      else if(label.includes('log')) renderLog();
-    } else {
-      renderCal();
-    }
+    // Re-render whichever view is currently showing
+    if(currentView==='calendar') renderCal();
+    else if(currentView==='analytics') renderAna();
+    else if(currentView==='log') renderLog();
     updStatus();
   } catch(e){
     setSyncStatus('⚠ Offline','var(--red)');
@@ -827,11 +820,24 @@ function renderCal(){
 // ═══════════════════════════════════════════════════
 // SESSIONS
 // ═══════════════════════════════════════════════════
-function openSess(tid,dk){ return S.sessions.find(s=>String(s.truckId)===String(tid)&&s.date===dk&&!s.checkOut); }
+// A session is "open" if checkOut is null, undefined, or empty string
+function isOpen(s){ return !s.checkOut || s.checkOut==='' || s.checkOut==='null'; }
+function openSess(tid,dk){ return S.sessions.find(s=>String(s.truckId)===String(tid)&&s.date===dk&&isOpen(s)); }
 
 function startCI(tid,dk){
   if(!isToday(dk)){alert('Check-in is only allowed for today.');return;}
-  if(openSess(tid,dk)) return;
+  // Refresh from server first to prevent duplicate check-ins across devices
+  silentSync().then(()=>{
+    if(openSess(tid,dk)){
+      alert('This truck is already checked in.');
+      renderCal();
+      return;
+    }
+    _openCIModal(tid,dk);
+  });
+}
+
+function _openCIModal(tid,dk){
   const tk=S.trucks.find(t=>String(t.id)===String(tid)); if(!tk) return;
   ciPending={truckId:tid,dateKey:dk}; ciSelDoor=null;
   document.getElementById('ci-trailer').value='';
@@ -840,7 +846,7 @@ function startCI(tid,dk){
     <span style="width:10px;height:10px;border-radius:50%;background:${tk.color};flex-shrink:0"></span>
     <div><div style="font-weight:700">${tk.name}</div>
     <div style="font-size:11px;color:var(--text2)">${tk.group||''} · ${tk.start}–${tk.end} · ${fdt(dk+'T12:00')}</div></div></div>`;
-  const occupied=S.sessions.filter(s=>!s.checkOut&&s.date===dk).map(s=>s.door);
+  const occupied=S.sessions.filter(s=>isOpen(s)&&s.date===dk).map(s=>s.door);
   let grid='';
   if(!S.doors.length){
     grid=`<div class="notice n-warn" style="margin:0"><i class="ti ti-alert-triangle"></i> No doors configured.</div>`;
@@ -864,31 +870,62 @@ function selDoor(el,door){
 async function confirmCI(){
   const trailer=document.getElementById('ci-trailer').value.trim();
   if(!trailer||!ciSelDoor){ document.getElementById('ci-err').style.display='block'; return; }
+  // Double-check no open session exists
+  if(openSess(ciPending.truckId,ciPending.dateKey)){
+    alert('This truck is already checked in.');
+    closeOv('ciOv'); renderCal(); return;
+  }
   const tk=S.trucks.find(t=>String(t.id)===String(ciPending.truckId));
-  const sess={id:'s'+Date.now(),truckId:ciPending.truckId,date:ciPending.dateKey,
-    checkIn:new Date().toISOString(),checkOut:'',door:ciSelDoor,trailer,
-    truckName:tk?tk.name:'',checkedInBy:currentUser.displayName,checkedInUser:currentUser.username};
+  const sess={
+    id:'s'+Date.now(),
+    truckId:ciPending.truckId,
+    date:ciPending.dateKey,
+    checkIn:new Date().toISOString(),
+    checkOut:null,
+    door:ciSelDoor,
+    trailer,
+    truckName:tk?tk.name:'',
+    checkedInBy:currentUser.displayName,
+    checkedInUser:currentUser.username
+  };
+  // Update local state immediately for responsiveness
   S.sessions.push(sess);
-  closeOv('ciOv'); renderCal();
+  closeOv('ciOv');
+  renderCal();
   setSyncStatus('⟳ Saving…','var(--amber)');
   try{
     await api(withUser({action:'checkIn',data:JSON.stringify(sess)}));
     setSyncStatus('⚡ Live','var(--green)');
-  } catch(e){ setSyncStatus('⚠ Sync error','var(--red)'); }
+    // Sync to get server-confirmed state
+    await silentSync();
+  } catch(e){
+    setSyncStatus('⚠ Sync error','var(--red)');
+    console.error('Check-in save error:',e);
+  }
 }
 
 async function doOut(tid,dk){
   if(!isToday(dk)){alert('Check-out is only allowed for today.');return;}
-  const s=openSess(tid,dk); if(!s) return;
+  const s=openSess(tid,dk);
+  if(!s){alert('No open check-in found for this truck.');return;}
   const tk=S.trucks.find(t=>String(t.id)===String(tid));
-  s.checkOut=new Date().toISOString();
-  s.checkedOutBy=currentUser.displayName; s.checkedOutUser=currentUser.username;
+  const now=new Date().toISOString();
+  // Update local state immediately
+  s.checkOut=now;
+  s.checkedOutBy=currentUser.displayName;
+  s.checkedOutUser=currentUser.username;
+  closeOv('detOv');
   renderCal();
   setSyncStatus('⟳ Saving…','var(--amber)');
   try{
     await api(withUser({action:'checkOut',data:JSON.stringify({...s,truckName:tk?tk.name:''})}));
     setSyncStatus('⚡ Live','var(--green)');
-  } catch(e){ setSyncStatus('⚠ Sync error','var(--red)'); }
+    // Sync to get server-confirmed state
+    await silentSync();
+  } catch(e){
+    setSyncStatus('⚠ Sync error','var(--red)');
+    console.error('Check-out save error:',e);
+  }
 }
 
 // ═══════════════════════════════════════════════════
@@ -955,7 +992,7 @@ function openDet(tid,dk){
   f+=`<div style="display:flex;gap:8px">`;
   if(isTd&&!hol&&!cancelled){
     if(!sess) f+=`<button class="btn btn-primary" onclick="closeOv('detOv');startCI('${tid}','${dk}')"><i class="ti ti-login"></i> Check In</button>`;
-    else f+=`<button class="btn" style="background:var(--green-bg);border-color:var(--green-bd);color:var(--green)" onclick="doOut('${tid}','${dk}');closeOv('detOv')"><i class="ti ti-logout"></i> Check Out</button>`;
+    else f+=`<button class="btn" style="background:var(--green-bg);border-color:var(--green-bd);color:var(--green)" onclick="doOut('${tid}','${dk}')"><i class="ti ti-logout"></i> Check Out</button>`;
   }
   f+=`<button class="btn" onclick="closeOv('detOv')"><i class="ti ti-x"></i> Close</button></div>`;
   document.getElementById('detF').innerHTML=f;
