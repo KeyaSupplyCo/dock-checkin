@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dock Check-In System</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.0.0/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f0f2f5;--bg2:#ffffff;--bg3:#f5f6f8;--bg4:#e8eaef;
+  --border:#dde0e8;--border2:#c5c9d6;
+  --text:#1a1d2e;--text2:#525a78;--text3:#8a93b0;
+  --accent:#4361ee;--accent-lt:#eef1fd;--accent-dk:#2d49c7;
+  --green:#16a34a;--green-bg:#f0fdf4;--green-bd:#86efac;
+  --amber:#d97706;--amber-bg:#fffbeb;--amber-bd:#fcd34d;
+  --red:#dc2626;--red-bg:#fef2f2;--red-bd:#fca5a5;
+  --blue:#2563eb;--blue-bg:#eff6ff;--blue-bd:#93c5fd;
+  --weekend:#f7f8fb;
+  --radius:6px;--radius2:10px;
+  --font:'Segoe UI',system-ui,sans-serif;
+  --sh:0 1px 3px rgba(0,0,0,.07),0 1px 2px rgba(0,0,0,.04);
+  --sh2:0 8px 30px rgba(0,0,0,.14);
+}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;font-size:13px}
+
+/* ── BRANDING BAR ── */
+.brand-bar{background:#fff;border-bottom:1px solid var(--border);padding:0 20px;height:56px;display:flex;align-items:center;gap:14px;flex-shrink:0}
+.logo-slot{width:44px;height:44px;border-radius:var(--radius);border:2px dashed var(--border2);display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;flex-shrink:0;position:relative;background:var(--bg3)}
+.logo-slot img{width:100%;height:100%;object-fit:contain}
+.logo-slot .logo-ph{font-size:10px;color:var(--text3);text-align:center;line-height:1.2;padding:4px;pointer-events:none}
+.logo-slot input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.app-title-wrap{display:flex;align-items:center;gap:6px}
+.app-title-text{font-size:16px;font-weight:700;color:var(--text);cursor:pointer;border-bottom:2px dashed transparent;transition:border .15s;padding-bottom:1px}
+.app-title-text:hover{border-bottom-color:var(--accent)}
+.app-title-edit{display:none;font-size:15px;font-weight:700;border:1px solid var(--accent);border-radius:var(--radius);padding:4px 10px;font-family:var(--font);color:var(--text);background:#fff;width:220px}
+.app-title-edit:focus{outline:none}
+.edit-hint{font-size:10px;color:var(--text3);margin-top:2px}
+
+/* ── TOP NAV ── */
+.topnav{background:#fff;border-bottom:1px solid var(--border);padding:0 20px;height:46px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;box-shadow:var(--sh)}
+.nav-tabs{display:flex;gap:2px}
+.nav-tab{padding:6px 14px;border-radius:var(--radius);font-size:13px;cursor:pointer;color:var(--text2);border:none;background:none;font-family:var(--font);display:inline-flex;align-items:center;gap:5px;transition:all .15s}
+.nav-tab:hover{background:var(--bg3)}
+.nav-tab.active{background:var(--accent-lt);color:var(--accent);font-weight:600}
+.topnav-right{display:flex;gap:8px}
+
+/* ── BUTTONS ── */
+.btn{padding:7px 14px;border-radius:var(--radius);font-size:13px;cursor:pointer;border:1px solid var(--border);background:#fff;color:var(--text);font-family:var(--font);display:inline-flex;align-items:center;gap:6px;box-shadow:var(--sh);transition:all .12s;white-space:nowrap}
+.btn:hover{background:var(--bg3);border-color:var(--border2)}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 2px 6px rgba(67,97,238,.28)}
+.btn-primary:hover{background:var(--accent-dk);border-color:var(--accent-dk)}
+.btn-danger{background:var(--red-bg);border-color:var(--red-bd);color:var(--red)}
+.btn-danger:hover{background:#fee2e2}
+.btn-sm{padding:4px 10px;font-size:12px;gap:4px}
+.btn-icon{padding:5px 10px;gap:5px;font-size:12px}
+
+/* nav arrow buttons */
+.arr-btn{padding:6px 12px;border-radius:var(--radius);font-size:20px;cursor:pointer;border:1px solid var(--border);background:#fff;color:var(--text2);font-family:var(--font);display:inline-flex;align-items:center;justify-content:center;box-shadow:var(--sh);line-height:1;transition:all .12s;user-select:none}
+.arr-btn:hover{background:var(--bg3);border-color:var(--border2);color:var(--text)}
+
+/* ── CAL HEADER ── */
+.cal-header{background:#fff;border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.cal-nav{display:flex;align-items:center;gap:8px}
+.wk-lbl{font-size:14px;font-weight:600;min-width:240px;color:var(--text)}
+.today-indicator{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--text3);background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:3px 10px}
+.today-indicator .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex-shrink:0}
+
+/* ── CALENDAR ── */
+.cal-cont{flex:1;overflow:auto}
+.cal-wrap{min-width:860px}
+.cal-head{display:grid;grid-template-columns:56px repeat(7,1fr);background:#fff;border-bottom:2px solid var(--border2);position:sticky;top:0;z-index:10}
+.th-time{border-right:2px solid var(--border2)}
+.th-day{padding:7px 10px;text-align:center;border-left:1px solid var(--border);background:#fff}
+.th-day.weekend{background:var(--weekend)}
+.th-day.is-today{background:#f5f7ff}
+.th-day .dn{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);font-weight:700}
+.th-day .dd{font-size:21px;font-weight:700;width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:50%;margin:2px auto 0}
+.th-day.is-today .dd{background:var(--accent);color:#fff}
+.th-day.is-hol{background:#fff5f5}
+.hol-lbl{font-size:9px;color:var(--red);font-weight:700;margin-top:2px;line-height:1.2}
+
+.cal-body{width:100%;overflow:visible}
+/* 15-min time label */
+.tl15{font-size:9px;color:var(--text3);text-align:right;padding-right:6px;height:16px;border-right:2px solid var(--border2);border-bottom:1px solid #f0f1f5;background:#fff;display:flex;align-items:center;justify-content:flex-end;white-space:nowrap;overflow:hidden}
+.tl15.tl-hour{border-bottom:1px solid var(--border2);font-size:10px;color:var(--text2);font-weight:600}
+.tl15.tl-half{border-bottom:1px dashed #e0e3ea;}
+
+/* ── EVENTS ── */
+.tevt{border-radius:5px;font-size:11px;cursor:pointer;display:flex;align-items:flex-start;gap:4px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.09);transition:box-shadow .1s,filter .1s}
+.tevt:hover{box-shadow:0 2px 8px rgba(0,0,0,.14)!important;filter:brightness(.97)}
+.tevt.not-today-evt{opacity:.5;cursor:default}
+.tevt.not-today-evt:hover{filter:none;box-shadow:0 1px 3px rgba(0,0,0,.09)!important}
+.einn{flex:1;overflow:hidden;min-width:0}
+.enm{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px}
+.emt{font-size:10px;opacity:.72;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ckbtn{padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;cursor:pointer;border:none;font-family:var(--font);white-space:nowrap;flex-shrink:0;box-shadow:0 1px 2px rgba(0,0,0,.12);transition:all .1s}
+
+/* ── OVERLAYS ── */
+.ov{position:fixed;inset:0;background:rgba(20,25,45,.42);z-index:200;display:none;align-items:center;justify-content:center}
+.ov.open{display:flex}
+.modal{background:#fff;border:1px solid var(--border);border-radius:var(--radius2);max-height:90vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:var(--sh2)}
+.msm{width:400px}.mmd{width:580px}.mlg{width:700px}
+.mhdr{padding:15px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:#fff}
+.mtit{font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px}
+.mtit i{color:var(--accent)}
+.mbdy{padding:20px;overflow-y:auto;flex:1}
+.mftr{padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:8px;flex-shrink:0;background:#fff}
+.xbtn{background:var(--bg3);border:1px solid var(--border);color:var(--text2);cursor:pointer;padding:6px 12px;font-size:13px;display:inline-flex;align-items:center;gap:5px;border-radius:var(--radius);font-family:var(--font);font-weight:600;transition:all .12s}
+.xbtn:hover{background:var(--bg4);color:var(--text)}
+
+/* ── FORMS ── */
+.fg{margin-bottom:14px}
+.fl{font-size:11px;font-weight:700;color:var(--text2);margin-bottom:5px;display:block;text-transform:uppercase;letter-spacing:.5px}
+.fi{width:100%;padding:8px 11px;background:#fff;border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);font-size:13px;font-family:var(--font);transition:border .12s}
+.fi:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(67,97,238,.1)}
+.firow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+/* ── DAY TOGGLES ── */
+.dsel{display:flex;gap:5px}
+.dtog{width:36px;height:36px;border-radius:50%;border:1px solid var(--border2);background:#fff;color:var(--text2);font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-family:var(--font);transition:all .12s}
+.dtog:hover{border-color:var(--accent);color:var(--accent)}
+.dtog.on{background:var(--accent);border-color:var(--accent);color:#fff}
+
+/* ── TABLE ── */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{text-align:left;padding:8px 12px;border-bottom:2px solid var(--border);color:var(--text2);font-size:11px;text-transform:uppercase;letter-spacing:.5px;background:var(--bg3)}
+.tbl td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+.tbl tr:hover td{background:var(--bg3)}
+.dpip{width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;margin:1px}
+.dpip.on{background:var(--accent);color:#fff}
+.dpip.off{background:var(--bg4);color:var(--text3)}
+
+/* ── BADGES ── */
+.badge{padding:2px 9px;border-radius:20px;font-size:10px;font-weight:700;display:inline-flex;align-items:center;gap:3px}
+.b-in{background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd)}
+.b-out{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-bd)}
+.b-dur{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd)}
+.b-grp{background:var(--accent-lt);color:var(--accent);border:1px solid #bcc8f7;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700}
+
+/* ── TABS ── */
+.tab-row{display:flex;border-bottom:1px solid var(--border);margin-bottom:16px}
+.tab{padding:8px 16px;font-size:13px;cursor:pointer;border-bottom:2px solid transparent;color:var(--text2);margin-bottom:-1px;font-weight:500;transition:all .12s}
+.tab.on{border-bottom-color:var(--accent);color:var(--accent)}
+.tc{display:none}.tc.on{display:block}
+
+/* ── STATUS BAR ── */
+.sbar{background:#fff;border-top:1px solid var(--border);padding:6px 20px;font-size:11px;color:var(--text2);display:flex;gap:20px;flex-shrink:0;align-items:center}
+.si{display:flex;align-items:center;gap:5px}
+.sdot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+
+/* ── ANALYTICS ── */
+.sg{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.sc{background:#fff;border:1px solid var(--border);border-radius:var(--radius2);padding:16px;box-shadow:var(--sh)}
+.sl{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;font-weight:600}
+.sv{font-size:26px;font-weight:700;line-height:1}
+.ss{font-size:11px;color:var(--text3);margin-top:3px}
+.chart-wrap{background:#fff;border:1px solid var(--border);border-radius:var(--radius2);padding:20px;box-shadow:var(--sh)}
+.chart-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.chart-title{font-size:13px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
+
+/* ── LOG ── */
+.log-wrap{background:#fff;border:1px solid var(--border);border-radius:var(--radius2);overflow:hidden;box-shadow:var(--sh)}
+.log-toolbar{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--bg3)}
+.log-toolbar-left{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.log-scroll{overflow-x:auto}
+
+/* ── DOOR GRID ── */
+.door-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px}
+.door-opt{padding:12px 8px;border-radius:var(--radius);border:2px solid var(--border);background:#fff;cursor:pointer;text-align:center;font-weight:700;font-size:13px;transition:all .12s;font-family:var(--font);line-height:1.3}
+.door-opt:hover{border-color:var(--accent);background:var(--accent-lt);color:var(--accent)}
+.door-opt.selected{border-color:var(--accent);background:var(--accent);color:#fff}
+.door-opt.occupied{border-color:var(--amber-bd);background:var(--amber-bg);color:var(--amber);cursor:not-allowed}
+
+/* ── MISC ── */
+.empty{text-align:center;padding:36px 20px;color:var(--text3)}
+.empty i{font-size:36px;display:block;margin-bottom:10px;opacity:.35}
+.notice{padding:10px 14px;border-radius:var(--radius);font-size:12px;margin-bottom:14px;display:flex;align-items:flex-start;gap:8px}
+.notice i{flex-shrink:0;margin-top:1px}
+.n-info{background:var(--blue-bg);border:1px solid var(--blue-bd);color:var(--blue)}
+.n-warn{background:var(--amber-bg);border:1px solid var(--amber-bd);color:var(--amber)}
+.err{color:var(--red);font-size:12px;margin-top:5px;display:none}
+.divider{height:1px;background:var(--border);margin:14px 0}
+.swatch{width:12px;height:12px;border-radius:50%;display:inline-block;border:1px solid rgba(0,0,0,.1);flex-shrink:0}
+.scroll{overflow-y:auto;max-height:320px}
+.grp-hdr{display:flex;align-items:center;gap:8px;margin-bottom:8px;padding-bottom:6px}
+.section-label{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
+.hol-item{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg3);border-radius:var(--radius);margin-bottom:7px;border:1px solid var(--border)}
+
+/* ── DIRECTION BUTTONS ── */
+.dir-btn{padding:9px 20px;border-radius:var(--radius);border:2px solid var(--border2);background:#fff;color:var(--text2);font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-family:var(--font);transition:all .12s;flex:1;justify-content:center}
+.dir-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-lt)}
+.dir-btn.active-in{background:#eff6ff;border-color:var(--blue);color:var(--blue)}
+.dir-btn.active-out{background:#f0fdf4;border-color:var(--green);color:var(--green)}
+.dir-badge-in{background:#eff6ff;color:var(--blue);border:1px solid var(--blue-bd);padding:1px 7px;border-radius:20px;font-size:10px;font-weight:700;display:inline-flex;align-items:center;gap:3px}
+.dir-badge-out{background:#f0fdf4;color:var(--green);border:1px solid var(--green-bd);padding:1px 7px;border-radius:20px;font-size:10px;font-weight:700;display:inline-flex;align-items:center;gap:3px}
+</style>
+</head>
+<body>
+
+<!-- BRANDING BAR -->
+<div class="brand-bar">
+  <div class="logo-slot" title="Click to upload logo" id="logoSlot">
+    <div class="logo-ph" id="logoPh"><i class="ti ti-building" style="font-size:16px;display:block;margin-bottom:2px"></i>Logo</div>
+    <img id="logoImg" style="display:none">
+    <input type="file" accept="image/*" onchange="uploadLogo(this)">
+  </div>
+  <div class="app-title-wrap">
+    <span class="app-title-text" id="appTitleText" onclick="reqTitleEdit()" title="Click to edit name (password required)">Dock Operations</span>
+    <input class="app-title-edit" id="appTitleInput" type="text" placeholder="Company name…" onblur="saveTitle()" onkeydown="if(event.key==='Enter')saveTitle();if(event.key==='Escape')cancelTitle()">
+    <i class="ti ti-pencil" style="font-size:13px;color:var(--text3);cursor:pointer" onclick="reqTitleEdit()" title="Edit name"></i>
+  </div>
+  <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+    <button class="btn btn-sm" onclick="reqAuth('holiday')"><i class="ti ti-calendar-off"></i> Holidays</button>
+    <button class="btn btn-primary btn-sm" onclick="reqAuth('schedule')"><i class="ti ti-settings"></i> Manage Trucks</button>
+  </div>
+</div>
+
+<!-- TOP NAV -->
+<div class="topnav">
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showView('calendar',this)"><i class="ti ti-calendar"></i> Calendar</button>
+    <button class="nav-tab" onclick="showView('analytics',this)"><i class="ti ti-chart-bar"></i> Analytics</button>
+    <button class="nav-tab" onclick="showView('log',this)"><i class="ti ti-list"></i> Log</button>
+  </div>
+  <div id="todayBadge" class="today-indicator"><span class="dot"></span><span id="todayStr">—</span></div>
+</div>
+
+<!-- CAL HEADER -->
+<div class="cal-header" id="calHdr">
+  <div class="cal-nav">
+    <button class="arr-btn" onclick="shiftWk(-1)" title="Previous week">&#8592;</button>
+    <button class="btn btn-sm" onclick="goToday()"><i class="ti ti-calendar-event"></i> Today</button>
+    <button class="arr-btn" onclick="shiftWk(1)" title="Next week">&#8594;</button>
+    <span class="wk-lbl" id="wkLbl"></span>
+  </div>
+  <span style="font-size:12px;color:var(--text3)">Full Week · Sun – Sat &nbsp;·&nbsp; Check-in allowed today only</span>
+</div>
+
+<!-- VIEWS -->
+<div id="v-cal" class="cal-cont">
+  <div class="cal-wrap">
+    <div class="cal-head" id="calHead"></div>
+    <div class="cal-body" id="calBody"></div>
+  </div>
+</div>
+
+<div id="v-ana" style="display:none;padding:20px;overflow:auto;flex:1;flex-direction:column">
+  <div class="sg" id="statGrid"></div>
+  <div class="chart-wrap">
+    <div class="chart-head">
+      <span class="chart-title">Average dock time by truck</span>
+      <select class="fi" style="width:150px" id="aPer" onchange="renderAna()">
+        <option value="7">Last 7 days</option>
+        <option value="30">Last 30 days</option>
+        <option value="9999">All time</option>
+      </select>
+    </div>
+    <div id="aChart"></div>
+  </div>
+</div>
+
+<div id="v-log" style="display:none;padding:20px;overflow:auto;flex:1;flex-direction:column">
+  <div class="log-wrap">
+    <div class="log-toolbar">
+      <div class="log-toolbar-left">
+        <span class="section-label"><i class="ti ti-list" style="font-size:13px"></i> Session Log</span>
+        <input type="text" class="fi" style="width:200px;margin:0" placeholder="Filter by truck, group, trailer…" id="logF" oninput="renderLog()">
+        <select class="fi" style="width:130px;margin:0" id="logStatus" onchange="renderLog()">
+          <option value="">All statuses</option>
+          <option value="in">On Dock</option>
+          <option value="out">Completed</option>
+        </select>
+        <select class="fi" style="width:130px;margin:0" id="logDir" onchange="renderLog()">
+          <option value="">All directions</option>
+          <option value="Inbound">Inbound</option>
+          <option value="Outbound">Outbound</option>
+        </select>
+      </div>
+      <button class="btn btn-sm" onclick="exportCSV()"><i class="ti ti-download"></i> Export CSV</button>
+    </div>
+    <div class="log-scroll"><div id="logB"></div></div>
+  </div>
+</div>
+
+<!-- STATUS BAR -->
+<div class="sbar">
+  <span class="si"><span class="sdot" style="background:var(--accent)"></span><span id="sb1">0</span> scheduled today</span>
+  <span class="si"><span class="sdot" style="background:var(--green)"></span><span id="sb2">0</span> on dock</span>
+  <span class="si"><span class="sdot" style="background:var(--amber)"></span><span id="sb3">0</span> overdue</span>
+  <span class="si" style="margin-left:auto;color:var(--text3)"><i class="ti ti-clock" style="font-size:12px"></i>&nbsp;Updated <span id="sb4">—</span></span>
+</div>
+
+<!-- PASSWORD OVERLAY -->
+<div class="ov" id="pwOv">
+  <div class="modal msm">
+    <div class="mhdr">
+      <div class="mtit"><i class="ti ti-lock"></i> Admin Access</div>
+      <button class="xbtn" onclick="closePw()"><i class="ti ti-x"></i> Close</button>
+    </div>
+    <div class="mbdy">
+      <div class="fg">
+        <label class="fl">Password</label>
+        <input type="password" class="fi" id="pwIn" placeholder="Enter admin password" autocomplete="off">
+        <div class="err" id="pwErr"><i class="ti ti-alert-circle"></i> Incorrect password — try again.</div>
+      </div>
+    </div>
+    <div class="mftr">
+      <button class="btn" onclick="closePw()"><i class="ti ti-x"></i> Cancel</button>
+      <button class="btn btn-primary" onclick="submitPw()"><i class="ti ti-check"></i> Enter</button>
+    </div>
+  </div>
+</div>
+
+<!-- HOLIDAY OVERLAY -->
+<div class="ov" id="holOv">
+  <div class="modal mmd">
+    <div class="mhdr">
+      <div class="mtit"><i class="ti ti-calendar-off"></i> Holiday Calendar</div>
+      <button class="xbtn" onclick="closeOv('holOv')"><i class="ti ti-x"></i> Close</button>
+    </div>
+    <div class="mbdy">
+      <div class="notice n-info"><i class="ti ti-info-circle"></i> Check In is disabled on holidays. Holidays appear in red on the calendar.</div>
+      <div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:14px">
+        <div class="fg" style="flex:1;margin:0"><label class="fl">Date</label><input type="date" class="fi" id="hDate"></div>
+        <div class="fg" style="flex:2;margin:0"><label class="fl">Holiday name</label><input type="text" class="fi" id="hName" placeholder="e.g. Canada Day"></div>
+        <button class="btn btn-primary" style="height:36px;flex-shrink:0;align-self:flex-end" onclick="addHol()"><i class="ti ti-plus"></i> Add</button>
+      </div>
+      <div class="divider"></div>
+      <div class="section-label" style="margin-bottom:10px">Scheduled Holidays</div>
+      <div class="scroll" id="holList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- SCHEDULE OVERLAY -->
+<div class="ov" id="schedOv">
+  <div class="modal mlg">
+    <div class="mhdr">
+      <div class="mtit"><i class="ti ti-truck"></i> Manage Truck Schedules</div>
+      <button class="xbtn" onclick="closeOv('schedOv')"><i class="ti ti-x"></i> Close</button>
+    </div>
+    <div class="mbdy">
+      <div class="tab-row">
+        <div class="tab on" id="tlist" onclick="switchTab('list')">All Schedules</div>
+        <div class="tab" id="tform" onclick="switchTab('form')">+ Add / Edit</div>
+        <div class="tab" id="tdoors" onclick="switchTab('doors')"><i class="ti ti-door"></i> Dock Doors</div>
+      </div>
+      <div class="tc on" id="tc-list"><div id="truckList"></div></div>
+      <div class="tc" id="tc-form">
+        <div class="firow">
+          <div class="fg"><label class="fl">Truck / Carrier name *</label><input type="text" class="fi" id="fN" placeholder="e.g. ABC Transport – Run 1"></div>
+          <div class="fg"><label class="fl">Customer / Destination group *</label><input type="text" class="fi" id="fG" placeholder="e.g. Ford Dearborn Plant" list="grpDL"><datalist id="grpDL"></datalist></div>
+        </div>
+        <div class="fg">
+          <label class="fl">Direction *</label>
+          <div style="display:flex;gap:8px">
+            <button type="button" class="dir-btn" id="dirIn" data-val="Inbound" onclick="setDir('Inbound')">
+              <i class="ti ti-arrow-down-circle"></i> Inbound
+            </button>
+            <button type="button" class="dir-btn" id="dirOut" data-val="Outbound" onclick="setDir('Outbound')">
+              <i class="ti ti-arrow-up-circle"></i> Outbound
+            </button>
+          </div>
+        </div>
+        <div class="firow">
+          <div class="fg"><label class="fl">Window start *</label><input type="time" class="fi" id="fS" value="08:00"></div>
+          <div class="fg"><label class="fl">Window end *</label><input type="time" class="fi" id="fE" value="09:00"></div>
+        </div>
+        <div class="firow">
+          <div class="fg">
+            <label class="fl">Group color <span style="font-weight:400;text-transform:none">(shared by all in group)</span></label>
+            <input type="color" id="fC" value="#4361ee" style="width:44px;height:36px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;padding:2px">
+          </div>
+          <div class="fg"><label class="fl">Notes</label><input type="text" class="fi" id="fNotes" placeholder="Optional"></div>
+        </div>
+        <div class="fg">
+          <label class="fl">Recurring days *</label>
+          <div class="dsel" id="dsel">
+            <button type="button" class="dtog" data-d="0">S</button>
+            <button type="button" class="dtog" data-d="1">M</button>
+            <button type="button" class="dtog" data-d="2">T</button>
+            <button type="button" class="dtog" data-d="3">W</button>
+            <button type="button" class="dtog" data-d="4">T</button>
+            <button type="button" class="dtog" data-d="5">F</button>
+            <button type="button" class="dtog" data-d="6">S</button>
+          </div>
+        </div>
+        <input type="hidden" id="fId">
+        <input type="hidden" id="fDir" value="Inbound">
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-primary" onclick="saveTruck()"><i class="ti ti-device-floppy"></i> Save Schedule</button>
+          <button class="btn" onclick="clearForm()"><i class="ti ti-eraser"></i> Clear</button>
+        </div>
+      </div>
+      <div class="tc" id="tc-doors">
+        <div class="notice n-info"><i class="ti ti-info-circle"></i> Dock doors are shown as selectable options when a truck checks in. Manage them here.</div>
+        <div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:14px">
+          <div class="fg" style="flex:1;margin:0"><label class="fl">Door name / number</label><input type="text" class="fi" id="doorInput" placeholder="e.g. Door 5 or Bay A"></div>
+          <button class="btn btn-primary" style="height:36px;flex-shrink:0;align-self:flex-end" onclick="addDoor()"><i class="ti ti-plus"></i> Add Door</button>
+        </div>
+        <div class="divider"></div>
+        <div class="section-label" style="margin-bottom:10px">Configured Dock Doors</div>
+        <div id="doorList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CHECK-IN OVERLAY -->
+<div class="ov" id="ciOv">
+  <div class="modal msm">
+    <div class="mhdr">
+      <div class="mtit"><i class="ti ti-login"></i> Check In</div>
+      <button class="xbtn" onclick="closeOv('ciOv')"><i class="ti ti-x"></i> Close</button>
+    </div>
+    <div class="mbdy">
+      <div id="ci-info" style="background:var(--bg3);border-radius:var(--radius);padding:10px 14px;margin-bottom:16px;border:1px solid var(--border);font-size:13px"></div>
+      <div class="fg">
+        <label class="fl">Trailer number *</label>
+        <input type="text" class="fi" id="ci-trailer" placeholder="e.g. TRL-4821" style="font-size:14px;font-weight:600;letter-spacing:.5px">
+      </div>
+      <div class="fg">
+        <label class="fl">Select dock door *</label>
+        <div class="door-grid" id="ci-door-grid"></div>
+      </div>
+      <div class="err" id="ci-err"><i class="ti ti-alert-circle"></i> Please enter a trailer number and select a dock door.</div>
+    </div>
+    <div class="mftr">
+      <button class="btn" onclick="closeOv('ciOv')"><i class="ti ti-x"></i> Cancel</button>
+      <button class="btn btn-primary" onclick="confirmCI()"><i class="ti ti-login"></i> Confirm Check In</button>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL OVERLAY -->
+<div class="ov" id="detOv">
+  <div class="modal mmd">
+    <div class="mhdr">
+      <div class="mtit" id="detT"><i class="ti ti-truck"></i> Truck Detail</div>
+      <button class="xbtn" onclick="closeOv('detOv')"><i class="ti ti-x"></i> Close</button>
+    </div>
+    <div class="mbdy" id="detB"></div>
+    <div class="mftr" id="detF"></div>
+  </div>
+</div>
+
+<script>
+// ── CONFIG ────────────────────────────────────────
+const PW = 'dock2024';
+// 15-minute slots across 24 hours = 96 slots
+const SLOTS = []; for(let m=0;m<24*60;m+=15) SLOTS.push(m); // each value = minutes from midnight
+const DL = ['S','M','T','W','T','F','S'];
+const DF = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+// ── STATE ─────────────────────────────────────────
+function defState(){
+  return {
+    appTitle: 'Dock Operations',
+    logoData: null,
+    trucks:[
+      {id:'t1',name:'Alpha Freight – Run 1',group:'Ford Dearborn Plant',start:'07:00',end:'08:30',days:[1,2,3,4,5],color:'#4361ee',notes:''},
+      {id:'t2',name:'Beta Logistics',group:'Customer Pickups',start:'09:00',end:'10:30',days:[1,3,5],color:'#16a34a',notes:'Refrigerated'},
+      {id:'t3',name:'Gamma Transport',group:'Ford Dearborn Plant',start:'13:00',end:'14:00',days:[2,4],color:'#4361ee',notes:''},
+    ],
+    holidays:[
+      {date:'2026-05-10',name:'Holiday'},
+      {date:'2026-05-16',name:'Holiday'},
+    ],
+    sessions:[],
+    doors:['Door 1','Door 2','Door 3','Door 4'],
+    cancellations:[]  // [{truckId, date}] — one-time date cancellations
+  };
+}
+let S;
+try{ S = JSON.parse(localStorage.getItem('dockOps5')||'null')||defState(); }
+catch(e){ S = defState(); }
+if(!S.doors) S.doors=['Door 1','Door 2','Door 3','Door 4'];
+if(!S.appTitle) S.appTitle='Dock Operations';
+if(!S.cancellations) S.cancellations=[];
+function save(){ localStorage.setItem('dockOps5',JSON.stringify(S)); }
+
+// ── CANCELLATION HELPERS ──────────────────────────
+function isCancelled(tid,dk){ return S.cancellations.some(c=>c.truckId===tid&&c.date===dk); }
+function cancelOccurrence(tid,dk){
+  if(!confirm(`Remove this truck from the calendar on ${fdt(dk+'T12:00')} only?\n\nThe recurring schedule stays. This just hides it for this one date.`)) return;
+  if(!isCancelled(tid,dk)) S.cancellations.push({truckId:tid,date:dk});
+  save(); closeOv('detOv'); renderCal();
+}
+function restoreOccurrence(tid,dk){
+  S.cancellations=S.cancellations.filter(c=>!(c.truckId===tid&&c.date===dk));
+  save(); renderCal();
+}
+
+// ── TIME HELPERS ──────────────────────────────────
+function timeToMins(t){ const[h,m]=t.split(':').map(Number); return h*60+(m||0); }
+
+let wkStart = getSun(new Date());
+let pendAuth = null;
+let ciPending = null;
+let ciSelDoor = null;
+
+// ── DATE HELPERS ──────────────────────────────────
+function getSun(d){ const dt=new Date(d); dt.setHours(0,0,0,0); dt.setDate(dt.getDate()-dt.getDay()); return dt; }
+function dkey(d){ return new Date(d).toISOString().split('T')[0]; }
+function ftm(d){ return new Date(d).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}); }
+function fdt(d){ return new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }
+function fdtLong(d){ return new Date(d).toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'}); }
+function mdiff(a,b){ return Math.round((new Date(b)-new Date(a))/60000); }
+function isHol(d){ return S.holidays.some(h=>h.date===dkey(new Date(d))); }
+function holName(d){ const h=S.holidays.find(x=>x.date===dkey(new Date(d))); return h?h.name:''; }
+function tkey(){ return dkey(new Date()); }
+function isWeekend(d){ const day=new Date(d).getDay(); return day===0||day===6; }
+function isToday(d){ return dkey(new Date(d))===tkey(); }
+
+// ── INIT UI ───────────────────────────────────────
+function initUI(){
+  document.getElementById('appTitleText').textContent = S.appTitle||'Dock Operations';
+  document.title = (S.appTitle||'Dock Operations')+' — Check-In';
+  if(S.logoData){
+    document.getElementById('logoImg').src=S.logoData;
+    document.getElementById('logoImg').style.display='block';
+    document.getElementById('logoPh').style.display='none';
+  }
+  const now=new Date();
+  document.getElementById('todayStr').textContent=now.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+}
+
+// ── LOGO ──────────────────────────────────────────
+function uploadLogo(input){
+  const file=input.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    S.logoData=e.target.result; save();
+    document.getElementById('logoImg').src=S.logoData;
+    document.getElementById('logoImg').style.display='block';
+    document.getElementById('logoPh').style.display='none';
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── TITLE EDIT (password protected) ──────────────
+function reqTitleEdit(){
+  pendAuth='title';
+  document.getElementById('pwIn').value='';
+  document.getElementById('pwErr').style.display='none';
+  document.getElementById('pwOv').classList.add('open');
+  setTimeout(()=>document.getElementById('pwIn').focus(),60);
+}
+function activateTitleEdit(){
+  const inp=document.getElementById('appTitleInput');
+  const txt=document.getElementById('appTitleText');
+  inp.value=S.appTitle||'Dock Operations';
+  txt.style.display='none';
+  inp.style.display='inline-block';
+  setTimeout(()=>{ inp.focus(); inp.select(); },30);
+}
+function saveTitle(){
+  const inp=document.getElementById('appTitleInput');
+  const val=inp.value.trim();
+  if(val){ S.appTitle=val; save(); }
+  document.getElementById('appTitleText').textContent=S.appTitle||'Dock Operations';
+  document.title=(S.appTitle||'Dock Operations')+' — Check-In';
+  inp.style.display='none';
+  document.getElementById('appTitleText').style.display='';
+}
+function cancelTitle(){
+  document.getElementById('appTitleInput').style.display='none';
+  document.getElementById('appTitleText').style.display='';
+}
+
+// ── AUTH ──────────────────────────────────────────
+function reqAuth(tgt){
+  pendAuth=tgt;
+  document.getElementById('pwIn').value='';
+  document.getElementById('pwErr').style.display='none';
+  document.getElementById('pwOv').classList.add('open');
+  setTimeout(()=>document.getElementById('pwIn').focus(),60);
+}
+function closePw(){ document.getElementById('pwOv').classList.remove('open'); pendAuth=null; }
+function submitPw(){
+  if(document.getElementById('pwIn').value===PW){
+    const tgt=pendAuth; closePw();
+    if(tgt==='holiday'){ renderHolList(); document.getElementById('holOv').classList.add('open'); }
+    else if(tgt==='schedule'){ renderTruckList(); updGrpDL(); renderDoorList(); document.getElementById('schedOv').classList.add('open'); }
+    else if(tgt==='title'){ activateTitleEdit(); }
+  } else {
+    document.getElementById('pwErr').style.display='block';
+    document.getElementById('pwIn').value='';
+    document.getElementById('pwIn').focus();
+  }
+}
+document.getElementById('pwIn').addEventListener('keydown',e=>{ if(e.key==='Enter') submitPw(); });
+document.getElementById('hName').addEventListener('keydown',e=>{ if(e.key==='Enter') addHol(); });
+document.getElementById('doorInput').addEventListener('keydown',e=>{ if(e.key==='Enter') addDoor(); });
+function closeOv(id){ document.getElementById(id).classList.remove('open'); }
+
+// ── VIEWS ─────────────────────────────────────────
+function showView(v,btn){
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('v-cal').style.display   = v==='calendar'?'block':'none';
+  document.getElementById('calHdr').style.display  = v==='calendar'?'flex':'none';
+  document.getElementById('v-ana').style.display   = v==='analytics'?'flex':'none';
+  document.getElementById('v-log').style.display   = v==='log'?'flex':'none';
+  if(v==='analytics') renderAna();
+  if(v==='log') renderLog();
+}
+
+// ── CALENDAR ──────────────────────────────────────
+function shiftWk(n){ wkStart=new Date(wkStart); wkStart.setDate(wkStart.getDate()+n*7); renderCal(); }
+function goToday(){ wkStart=getSun(new Date()); renderCal(); }
+
+function slotLabel(mins){
+  if(mins%60!==0) return '';
+  const h=Math.floor(mins/60);
+  return `${h%12||12}${h<12?'am':'pm'}`;
+}
+
+function renderCal(){
+  const days=[];
+  for(let i=0;i<7;i++){ const d=new Date(wkStart); d.setDate(d.getDate()+i); days.push(d); }
+  const wEnd=new Date(wkStart); wEnd.setDate(wEnd.getDate()+6);
+  document.getElementById('wkLbl').textContent=
+    wkStart.toLocaleDateString('en-US',{month:'long',day:'numeric'})+' – '+
+    wEnd.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+
+  // ── Header ───────────────────────────────────────
+  let hdr='<div class="th-time"></div>';
+  days.forEach(d=>{
+    const isT=isToday(d),hol=isHol(d),wk=isWeekend(d);
+    hdr+=`<div class="th-day${isT?' is-today':''}${hol?' is-hol':''}${wk?' weekend':''}">
+      <div class="dn">${DF[d.getDay()]}</div>
+      <div class="dd">${d.getDate()}</div>
+      ${hol?`<div class="hol-lbl">⊘ ${holName(d)}</div>`:''}
+    </div>`;
+  });
+  document.getElementById('calHead').innerHTML=hdr;
+
+  // ── Layout constants ─────────────────────────────
+  const PX_PER_MIN = 1;          // 1px per minute
+  const TOTAL_H    = 24*60;      // 1440px total height
+  const HOUR_H     = 60;         // px per hour
+  const SLOT_H     = 15;         // px per 15-min slot (for label positioning)
+
+  // CSS gradient for grid lines:
+  // solid line every 60px (hour), dashed every 15px (quarter)
+  // We do this with repeating-linear-gradient on each column
+  const gridBg = `
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0px,
+      transparent 29px,
+      rgba(180,185,200,0.5) 29px,
+      rgba(180,185,200,0.5) 30px,
+      transparent 30px,
+      transparent 59px,
+      rgba(80,90,120,0.35) 59px,
+      rgba(80,90,120,0.35) 60px
+    )
+  `;
+
+  // ── Time label column ────────────────────────────
+  let timecol=`<div style="width:56px;flex-shrink:0;height:${TOTAL_H}px;position:relative;
+    border-right:2px solid #9099b8;background:#f8f9fb;">`;
+  for(let h=0;h<24;h++){
+    const top=h*HOUR_H;
+    const lbl=`${h%12||12}${h<12?'am':'pm'}`;
+    timecol+=`<div style="position:absolute;top:${top+2}px;right:6px;font-size:10px;
+      font-weight:700;color:#525a78;line-height:1;letter-spacing:-.2px;">${lbl}</div>`;
+  }
+  timecol+=`</div>`;
+
+  // ── Day columns ───────────────────────────────────
+  let daycols='';
+  days.forEach((d,di)=>{
+    const dk=dkey(d);
+    const isTd=isToday(d),wk=isWeekend(d),hol=isHol(d);
+    const colBg=hol?'#fff5f5':wk?'#f4f5f8':isTd?'#f0f4ff':'#ffffff';
+
+    // trucks for this day
+    const trucks=S.trucks.filter(tk=>
+      tk.days.includes(d.getDay())&&!isCancelled(tk.id,dk)
+    ).map(tk=>({...tk,sm:timeToMins(tk.start),em:timeToMins(tk.end)}));
+
+    // build events HTML
+    let evts='';
+    trucks.forEach(tk=>{
+      // find overlapping trucks to split width
+      const overlaps=trucks.filter(o=>o.sm<tk.em&&o.em>tk.sm);
+      const col=overlaps.indexOf(tk);
+      const cols=overlaps.length;
+      const wPct=100/cols;
+      const lPct=col*wPct;
+
+      const top=tk.sm*PX_PER_MIN;
+      const h=Math.max((tk.em-tk.sm)*PX_PER_MIN-2,18);
+
+      const sess=openSess(tk.id,dk);
+      const isIn=!!sess;
+      const over=isIn&&new Date()>new Date(dk+'T'+tk.end+':00');
+      const c=tk.color||'#4361ee';
+
+      let bg,brd,tc;
+      if(!isTd){            bg=c+'28'; brd=c+'77'; tc=c; }
+      else if(isIn&&over){  bg='#fffbeb'; brd='#f59e0b'; tc='#92400e'; }
+      else if(isIn){        bg='#dcfce7'; brd='#22c55e'; tc='#15803d'; }
+      else{                 bg=c+'33'; brd=c; tc=c; }
+
+      const dir=tk.direction||'Inbound';
+      const dirIcon=dir==='Inbound'?'↓':'↑';
+      const doorLbl=sess&&sess.door?` · ${sess.door}`:'';
+      const showBtn=isTd&&!hol&&cols===1;
+      const showDot=isTd&&!hol&&cols>1;
+
+      evts+=`<div style="
+          position:absolute;
+          top:${top}px;
+          left:calc(${lPct}% + 2px);
+          width:calc(${wPct}% - 4px);
+          height:${h}px;
+          background:${bg};
+          border:1.5px solid ${brd};
+          color:${tc};
+          border-radius:5px;
+          padding:3px 7px;
+          display:flex;
+          align-items:center;
+          gap:5px;
+          overflow:hidden;
+          box-shadow:0 1px 4px rgba(0,0,0,.1);
+          cursor:pointer;
+          opacity:${isTd?1:.55};
+          z-index:3;"
+        onmouseover="this.style.boxShadow='0 2px 10px rgba(0,0,0,.18)'"
+        onmouseout="this.style.boxShadow='0 1px 4px rgba(0,0,0,.1)'"
+        onclick="openDet('${tk.id}','${dk}')">
+        <div style="flex:1;min-width:0;overflow:hidden;">
+          <div style="font-weight:700;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${dirIcon} ${tk.name}</div>
+          <div style="font-size:10px;opacity:.75;white-space:nowrap;">${tk.start}–${tk.end}${doorLbl}</div>
+        </div>`;
+      if(showBtn){
+        if(!isIn) evts+=`<button class="ckbtn" style="background:#fff;color:${tc};border:1px solid ${brd};flex-shrink:0;" onclick="event.stopPropagation();startCI('${tk.id}','${dk}')">Check In</button>`;
+        else      evts+=`<button class="ckbtn" style="background:#166534;color:#fff;border:1px solid #15803d;flex-shrink:0;" onclick="event.stopPropagation();doOut('${tk.id}','${dk}')">Check Out</button>`;
+      }
+      if(showDot&&isIn)  evts+=`<div style="width:7px;height:7px;border-radius:50%;background:#166534;flex-shrink:0;" title="Checked in"></div>`;
+      if(showDot&&!isIn) evts+=`<span style="font-size:10px;opacity:.6;flex-shrink:0;">›</span>`;
+      evts+=`</div>`;
+    });
+
+    daycols+=`<div style="
+        flex:1;
+        min-width:0;
+        height:${TOTAL_H}px;
+        position:relative;
+        border-left:1px solid var(--border);
+        background-color:${colBg};
+        background-image:${gridBg};
+        overflow:visible;">
+      ${evts}
+    </div>`;
+  });
+
+  document.getElementById('calBody').innerHTML=`
+    <div style="display:flex;min-width:860px;">
+      ${timecol}
+      ${daycols}
+    </div>`;
+  updStatus();
+}
+
+function showNotTodayAlert(){
+  // subtle: do nothing silently — buttons aren't shown, event blocks. But clicking event box shows detail read-only.
+}
+
+// ── SESSIONS ──────────────────────────────────────
+function openSess(tid,dk){ return S.sessions.find(s=>s.truckId===tid&&s.date===dk&&!s.checkOut); }
+
+function startCI(tid,dk){
+  if(!isToday(dk)){ alert('Check-in is only allowed for today.'); return; }
+  if(openSess(tid,dk)) return;
+  const tk=S.trucks.find(t=>t.id===tid); if(!tk) return;
+  ciPending={truckId:tid,dateKey:dk};
+  ciSelDoor=null;
+  document.getElementById('ci-trailer').value='';
+  document.getElementById('ci-err').style.display='none';
+  document.getElementById('ci-info').innerHTML=`
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="width:10px;height:10px;border-radius:50%;background:${tk.color};flex-shrink:0"></span>
+      <div>
+        <div style="font-weight:700">${tk.name}</div>
+        <div style="font-size:11px;color:var(--text2)">${tk.group||''} &nbsp;·&nbsp; ${tk.start}–${tk.end} &nbsp;·&nbsp; ${fdt(dk+'T12:00')}</div>
+      </div>
+    </div>`;
+  const occupied=S.sessions.filter(s=>!s.checkOut&&s.date===dk).map(s=>s.door);
+  let grid='';
+  if(!S.doors.length){
+    grid=`<div class="notice n-warn" style="margin:0"><i class="ti ti-alert-triangle"></i> No dock doors configured. Add them in Manage Trucks → Dock Doors.</div>`;
+  } else {
+    S.doors.forEach(door=>{
+      const occ=occupied.includes(door);
+      grid+=`<button type="button" class="door-opt${occ?' occupied':''}" onclick="${occ?'':('selDoor(this,\''+door+'\')')}">${door}${occ?`<div style="font-size:9px;font-weight:400;margin-top:3px">Occupied</div>`:''}`;
+      grid+=`</button>`;
+    });
+  }
+  document.getElementById('ci-door-grid').innerHTML=grid;
+  document.getElementById('ciOv').classList.add('open');
+  setTimeout(()=>document.getElementById('ci-trailer').focus(),80);
+}
+function selDoor(el,door){
+  document.querySelectorAll('.door-opt').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  ciSelDoor=door;
+}
+function confirmCI(){
+  const trailer=document.getElementById('ci-trailer').value.trim();
+  if(!trailer||!ciSelDoor){ document.getElementById('ci-err').style.display='block'; return; }
+  S.sessions.push({id:'s'+Date.now(),truckId:ciPending.truckId,date:ciPending.dateKey,checkIn:new Date().toISOString(),checkOut:null,door:ciSelDoor,trailer});
+  save(); closeOv('ciOv'); renderCal();
+}
+function doOut(tid,dk){
+  if(!isToday(dk)){ alert('Check-out is only allowed for today.'); return; }
+  const s=openSess(tid,dk); if(!s) return;
+  s.checkOut=new Date().toISOString();
+  save(); renderCal();
+}
+
+// ── STATUS BAR ────────────────────────────────────
+function updStatus(){
+  const dow=new Date().getDay(); const hol=isHol(new Date());
+  let tot=0,ind=0,ov=0;
+  if(!hol){ S.trucks.forEach(t=>{ if(!t.days.includes(dow)) return; tot++; const s=openSess(t.id,tkey()); if(s){ ind++; if(new Date()>new Date(tkey()+'T'+t.end+':00')) ov++; } }); }
+  document.getElementById('sb1').textContent=tot;
+  document.getElementById('sb2').textContent=ind;
+  document.getElementById('sb3').textContent=ov;
+  document.getElementById('sb4').textContent=ftm(new Date());
+}
+
+// ── DETAIL OVERLAY ────────────────────────────────
+function openDet(tid,dk){
+  const tk=S.trucks.find(t=>t.id===tid); if(!tk) return;
+  const hol=isHol(dk+'T12:00');
+  const cancelled=isCancelled(tid,dk);
+  const sess=openSess(tid,dk);
+  const all=S.sessions.filter(s=>s.truckId===tid&&s.date===dk);
+  const isTd=isToday(dk);
+  const c=tk.color||'#4361ee';
+  const dir=tk.direction||'Inbound';
+  const dirBadge=dir==='Inbound'
+    ?`<span class="dir-badge-in"><i class="ti ti-arrow-down-circle"></i> Inbound</span>`
+    :`<span class="dir-badge-out"><i class="ti ti-arrow-up-circle"></i> Outbound</span>`;
+  document.getElementById('detT').innerHTML=`<i class="ti ti-truck" style="color:${c}"></i> ${tk.name}`;
+  let b=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+    <div><div class="fl">Date</div><div>${fdt(dk+'T12:00')}</div></div>
+    <div><div class="fl">Window</div><div>${tk.start} – ${tk.end}</div></div>
+    <div><div class="fl">Group</div><span class="b-grp">${tk.group||'—'}</span></div>
+    <div><div class="fl">Direction</div>${dirBadge}</div>
+    <div><div class="fl">Status</div>
+      ${cancelled?`<span style="color:var(--red);font-weight:700">Cancelled (this date)</span>`:
+        hol?`<span style="color:var(--red);font-weight:700">Holiday</span>`:
+        sess?`<span class="badge b-in">On Dock</span>`:
+        `<span style="color:var(--text2)">Scheduled</span>`}
+    </div>
+  </div>`;
+  if(cancelled){
+    b+=`<div class="notice n-warn"><i class="ti ti-calendar-off"></i>
+      <div>This truck has been <strong>removed from the calendar</strong> for this date only. The recurring schedule is unchanged.<br>
+      <button class="btn btn-sm" style="margin-top:8px" onclick="restoreOccurrence('${tid}','${dk}');closeOv('detOv')"><i class="ti ti-refresh"></i> Restore this date</button></div></div>`;
+  }
+  if(sess){
+    const dur=mdiff(sess.checkIn,new Date().toISOString());
+    b+=`<div class="notice n-info" style="margin-bottom:14px"><i class="ti ti-truck-loading"></i>
+      <div><strong>Checked in:</strong> ${ftm(sess.checkIn)}
+      ${sess.door?`<br><strong>Door:</strong> ${sess.door}`:''}
+      ${sess.trailer?`<br><strong>Trailer #:</strong> ${sess.trailer}`:''}
+      <br><strong>On dock:</strong> ${Math.floor(dur/60)}h ${dur%60}m</div></div>`;
+  }
+  if(all.length){
+    b+=`<div class="section-label" style="margin-bottom:8px">Session history (this date)</div>`;
+    all.forEach(s=>{
+      const dur=s.checkOut?mdiff(s.checkIn,s.checkOut):null;
+      b+=`<div style="background:var(--bg3);border-radius:var(--radius);padding:8px 12px;margin-bottom:6px;font-size:12px;border:1px solid var(--border)">
+        <div style="display:flex;gap:16px;flex-wrap:wrap">
+          <div>In: <strong>${ftm(s.checkIn)}</strong></div>
+          ${s.checkOut?`<div>Out: <strong>${ftm(s.checkOut)}</strong></div>`:''}
+          ${s.door?`<div>Door: <strong>${s.door}</strong></div>`:''}
+          ${s.trailer?`<div>Trailer: <strong>${s.trailer}</strong></div>`:''}
+        </div>
+        ${dur!==null?`<div style="margin-top:5px"><span class="badge b-dur"><i class="ti ti-clock"></i> ${Math.floor(dur/60)}h ${dur%60}m</span></div>`:`<div style="margin-top:4px;color:var(--green);font-weight:600">● Still on dock</div>`}
+      </div>`;
+    });
+  }
+  if(tk.notes) b+=`<div class="fl" style="margin-top:8px">Notes</div><div style="color:var(--text2)">${tk.notes}</div>`;
+  if(!isTd&&!hol&&!cancelled) b+=`<div class="notice n-warn" style="margin-top:12px;margin-bottom:0"><i class="ti ti-alert-triangle"></i> Check-in and check-out are only available for today.</div>`;
+  document.getElementById('detB').innerHTML=b;
+  let f='';
+  if(!hol&&!cancelled&&!sess){
+    f+=`<button class="btn btn-danger btn-sm" onclick="cancelOccurrence('${tid}','${dk}')"><i class="ti ti-calendar-x"></i> Cancel this date</button>`;
+  } else {
+    f+=`<span></span>`; // spacer to keep right buttons right-aligned
+  }
+  f+=`<div style="display:flex;gap:8px">`;
+  if(isTd&&!hol&&!cancelled){
+    if(!sess) f+=`<button class="btn btn-primary" onclick="closeOv('detOv');startCI('${tid}','${dk}')"><i class="ti ti-login"></i> Check In</button>`;
+    else f+=`<button class="btn" style="background:var(--green-bg);border-color:var(--green-bd);color:var(--green)" onclick="doOut('${tid}','${dk}');closeOv('detOv')"><i class="ti ti-logout"></i> Check Out</button>`;
+  }
+  f+=`<button class="btn" onclick="closeOv('detOv')"><i class="ti ti-x"></i> Close</button>`;
+  f+=`</div>`;
+  document.getElementById('detF').innerHTML=f;
+  document.getElementById('detOv').classList.add('open');
+}
+
+// ── HOLIDAYS ──────────────────────────────────────
+function renderHolList(){
+  const list=[...S.holidays].sort((a,b)=>a.date.localeCompare(b.date));
+  const el=document.getElementById('holList');
+  if(!list.length){ el.innerHTML=`<div class="empty"><i class="ti ti-calendar-off"></i>No holidays added yet.</div>`; return; }
+  el.innerHTML=list.map(h=>`<div class="hol-item">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="width:8px;height:8px;border-radius:50%;background:var(--red);flex-shrink:0"></div>
+      <div><div style="font-weight:700">${h.name}</div><div style="font-size:11px;color:var(--text3)">${fdt(h.date+'T12:00')}</div></div>
+    </div>
+    <button class="btn btn-danger btn-icon" onclick="delHol('${h.date}')"><i class="ti ti-trash"></i> Delete</button>
+  </div>`).join('');
+}
+function addHol(){
+  const date=document.getElementById('hDate').value;
+  const name=document.getElementById('hName').value.trim();
+  if(!date||!name){ alert('Please enter both a date and a name.'); return; }
+  if(S.holidays.some(h=>h.date===date)){ alert('A holiday already exists for this date.'); return; }
+  S.holidays.push({date,name}); save(); renderHolList(); renderCal();
+  document.getElementById('hDate').value=''; document.getElementById('hName').value='';
+}
+function delHol(date){
+  if(!confirm('Remove this holiday?')) return;
+  S.holidays=S.holidays.filter(h=>h.date!==date); save(); renderHolList(); renderCal();
+}
+
+// ── DOCK DOORS ────────────────────────────────────
+function renderDoorList(){
+  const el=document.getElementById('doorList');
+  if(!S.doors.length){ el.innerHTML=`<div class="empty"><i class="ti ti-door"></i>No doors configured yet.</div>`; return; }
+  el.innerHTML=`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+    ${S.doors.map((d,i)=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:8px"><i class="ti ti-door" style="color:var(--accent)"></i><span style="font-weight:600">${d}</span></div>
+      <button class="btn btn-danger btn-icon btn-sm" onclick="delDoor(${i})"><i class="ti ti-trash"></i> Remove</button>
+    </div>`).join('')}
+  </div>`;
+}
+function addDoor(){
+  const val=document.getElementById('doorInput').value.trim();
+  if(!val){ alert('Enter a door name.'); return; }
+  if(S.doors.includes(val)){ alert('Door already exists.'); return; }
+  S.doors.push(val); save(); renderDoorList(); document.getElementById('doorInput').value='';
+}
+function delDoor(i){
+  if(!confirm(`Remove "${S.doors[i]}"?`)) return;
+  S.doors.splice(i,1); save(); renderDoorList();
+}
+
+// ── TRUCK SCHEDULE ────────────────────────────────
+function updGrpDL(){
+  const grps=[...new Set(S.trucks.map(t=>t.group).filter(Boolean))];
+  document.getElementById('grpDL').innerHTML=grps.map(g=>`<option value="${g}">`).join('');
+}
+document.getElementById('fG').addEventListener('input',function(){
+  const g=this.value.trim(); if(!g||document.getElementById('fId').value) return;
+  const ex=S.trucks.find(t=>t.group===g&&t.color); if(ex) document.getElementById('fC').value=ex.color;
+});
+document.querySelectorAll('#dsel .dtog').forEach(b=>b.addEventListener('click',()=>b.classList.toggle('on')));
+
+function switchTab(t){
+  ['list','form','doors'].forEach(id=>{
+    document.getElementById('t'+id).classList.toggle('on',t===id);
+    document.getElementById('tc-'+id).classList.toggle('on',t===id);
+  });
+  if(t==='list') renderTruckList();
+  if(t==='doors') renderDoorList();
+}
+
+function renderTruckList(){
+  const el=document.getElementById('truckList');
+  if(!S.trucks.length){ el.innerHTML=`<div class="empty"><i class="ti ti-truck"></i>No trucks yet. Use "Add / Edit" tab.</div>`; return; }
+  const groups={};
+  S.trucks.forEach(t=>{ const g=t.group||'Ungrouped'; if(!groups[g]) groups[g]=[]; groups[g].push(t); });
+  let html='';
+  Object.entries(groups).forEach(([grp,trucks])=>{
+    const c=trucks[0].color||'#4361ee';
+    html+=`<div style="margin-bottom:22px">
+      <div class="grp-hdr" style="border-bottom:2px solid ${c}33;padding-bottom:7px">
+        <span style="width:12px;height:12px;border-radius:50%;background:${c};flex-shrink:0"></span>
+        <span style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">${grp}</span>
+        <span style="font-size:11px;color:var(--text3)">${trucks.length} truck${trucks.length>1?'s':''}</span>
+      </div>
+      <table class="tbl"><thead><tr><th>Truck</th><th>Direction</th><th>Window</th><th>Days</th><th>Actions</th></tr></thead><tbody>`;
+    trucks.forEach(t=>{
+      const dps=DL.map((n,i)=>`<span class="dpip ${t.days.includes(i)?'on':'off'}">${n}</span>`).join('');
+      const dir=t.direction||'Inbound';
+      const dirBadge=dir==='Inbound'
+        ?`<span class="dir-badge-in"><i class="ti ti-arrow-down-circle"></i> Inbound</span>`
+        :`<span class="dir-badge-out"><i class="ti ti-arrow-up-circle"></i> Outbound</span>`;
+      html+=`<tr>
+        <td><div style="font-weight:600">${t.name}</div>${t.notes?`<div style="font-size:11px;color:var(--text3)">${t.notes}</div>`:''}</td>
+        <td>${dirBadge}</td>
+        <td style="white-space:nowrap;font-size:12px">${t.start}–${t.end}</td>
+        <td>${dps}</td>
+        <td><div style="display:flex;gap:5px">
+          <button class="btn btn-icon btn-sm" onclick="editTruck('${t.id}')"><i class="ti ti-edit"></i> Edit</button>
+          <button class="btn btn-danger btn-icon btn-sm" onclick="delTruck('${t.id}')"><i class="ti ti-trash"></i> Delete</button>
+        </div></td>
+      </tr>`;
+    });
+    html+=`</tbody></table></div>`;
+  });
+  el.innerHTML=html;
+}
+
+function setDir(val){
+  document.getElementById('fDir').value=val;
+  document.getElementById('dirIn').className='dir-btn'+(val==='Inbound'?' active-in':'');
+  document.getElementById('dirOut').className='dir-btn'+(val==='Outbound'?' active-out':'');
+}
+
+function clearForm(){
+  ['fN','fG','fNotes','fId'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('fS').value='08:00'; document.getElementById('fE').value='09:00';
+  document.getElementById('fC').value='#4361ee';
+  document.querySelectorAll('#dsel .dtog').forEach(b=>b.classList.remove('on'));
+  setDir('Inbound');
+}
+function editTruck(id){
+  const t=S.trucks.find(x=>x.id===id); if(!t) return;
+  document.getElementById('fN').value=t.name||'';
+  document.getElementById('fG').value=t.group||'';
+  document.getElementById('fS').value=t.start||'08:00';
+  document.getElementById('fE').value=t.end||'09:00';
+  document.getElementById('fNotes').value=t.notes||'';
+  document.getElementById('fC').value=t.color||'#4361ee';
+  document.getElementById('fId').value=id;
+  setDir(t.direction||'Inbound');
+  document.querySelectorAll('#dsel .dtog').forEach(b=>b.classList.toggle('on',t.days.includes(parseInt(b.dataset.d))));
+  switchTab('form');
+}
+function saveTruck(){
+  const name=document.getElementById('fN').value.trim();
+  const grp=document.getElementById('fG').value.trim();
+  const start=document.getElementById('fS').value;
+  const end=document.getElementById('fE').value;
+  const notes=document.getElementById('fNotes').value.trim();
+  const color=document.getElementById('fC').value;
+  const direction=document.getElementById('fDir').value||'Inbound';
+  const days=[...document.querySelectorAll('#dsel .dtog.on')].map(b=>parseInt(b.dataset.d));
+  const eid=document.getElementById('fId').value;
+  if(!name){ alert('Enter a truck name.'); return; }
+  if(!grp){ alert('Enter a customer/group name.'); return; }
+  if(!days.length){ alert('Select at least one day.'); return; }
+  if(eid){ const t=S.trucks.find(x=>x.id===eid); if(t) Object.assign(t,{name,group:grp,start,end,notes,color,direction,days}); }
+  else S.trucks.push({id:'t'+Date.now(),name,group:grp,start,end,notes,color,direction,days});
+  S.trucks.forEach(t=>{ if(t.group===grp) t.color=color; });
+  save(); clearForm(); switchTab('list'); renderCal(); updGrpDL();
+}
+function delTruck(id){
+  if(!confirm('Remove this truck schedule?')) return;
+  S.trucks=S.trucks.filter(t=>t.id!==id); save(); renderTruckList(); renderCal();
+}
+
+// ── LOG ───────────────────────────────────────────
+function renderLog(){
+  const filter=document.getElementById('logF').value.toLowerCase();
+  const statusF=document.getElementById('logStatus').value;
+  const dirF=document.getElementById('logDir').value;
+  const sorted=[...S.sessions].sort((a,b)=>new Date(b.checkIn)-new Date(a.checkIn));
+  const filtered=sorted.filter(s=>{
+    const t=S.trucks.find(x=>x.id===s.truckId);
+    const txt=[t?t.name:'',t?t.group||'':'',s.trailer||'',s.door||''].join(' ').toLowerCase();
+    const matchTxt=!filter||txt.includes(filter);
+    const matchStatus=!statusF||(statusF==='in'&&!s.checkOut)||(statusF==='out'&&s.checkOut);
+    const matchDir=!dirF||((t?t.direction||'Inbound':'Inbound')===dirF);
+    return matchTxt&&matchStatus&&matchDir;
+  });
+  const el=document.getElementById('logB');
+  if(!filtered.length){ el.innerHTML=`<div class="empty"><i class="ti ti-list"></i>No entries found.</div>`; return; }
+  let html=`<table class="tbl" style="min-width:780px">
+    <thead><tr><th>Truck</th><th>Direction</th><th>Group</th><th>Date</th><th>Trailer</th><th>Door</th><th>Check In</th><th>Check Out</th><th>Duration</th><th>Status</th></tr></thead><tbody>`;
+  filtered.forEach(s=>{
+    const t=S.trucks.find(x=>x.id===s.truckId);
+    const dur=s.checkOut?mdiff(s.checkIn,s.checkOut):mdiff(s.checkIn,new Date().toISOString());
+    const dir=t?t.direction||'Inbound':'Inbound';
+    const dirBadge=dir==='Inbound'
+      ?`<span class="dir-badge-in"><i class="ti ti-arrow-down-circle"></i> Inbound</span>`
+      :`<span class="dir-badge-out"><i class="ti ti-arrow-up-circle"></i> Outbound</span>`;
+    html+=`<tr>
+      <td><div style="display:flex;align-items:center;gap:7px">
+        ${t?`<span class="swatch" style="background:${t.color}"></span>`:''}
+        <span style="font-weight:600">${t?t.name:'Unknown'}</span>
+      </div></td>
+      <td>${dirBadge}</td>
+      <td><span class="b-grp">${t?t.group||'—':'—'}</span></td>
+      <td style="white-space:nowrap;font-size:12px">${fdt(s.date+'T12:00')}</td>
+      <td style="font-weight:600;font-size:12px">${s.trailer||'—'}</td>
+      <td style="font-size:12px;color:var(--text2)">${s.door||'—'}</td>
+      <td style="white-space:nowrap;font-size:12px">${ftm(s.checkIn)}</td>
+      <td style="white-space:nowrap;font-size:12px">${s.checkOut?ftm(s.checkOut):'—'}</td>
+      <td><span class="badge b-dur"><i class="ti ti-clock"></i> ${Math.floor(dur/60)}h ${dur%60}m</span></td>
+      <td><span class="badge ${s.checkOut?'b-out':'b-in'}">${s.checkOut?'Completed':'On Dock'}</span></td>
+    </tr>`;
+  });
+  html+=`</tbody></table>`;
+  el.innerHTML=html;
+}
+function exportCSV(){
+  const rows=[['Truck','Direction','Group','Date','Trailer','Door','Check In','Check Out','Duration (min)','Status']];
+  [...S.sessions].sort((a,b)=>new Date(b.checkIn)-new Date(a.checkIn)).forEach(s=>{
+    const t=S.trucks.find(x=>x.id===s.truckId);
+    const dur=s.checkOut?mdiff(s.checkIn,s.checkOut):'';
+    rows.push([t?t.name:'Unknown',t?t.direction||'Inbound':'',t?t.group||'':'',s.date,s.trailer||'',s.door||'',s.checkIn,s.checkOut||'',dur,s.checkOut?'Completed':'On Dock']);
+  });
+  const csv=rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a=document.createElement('a'); a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download='dock_log_'+tkey()+'.csv'; a.click();
+}
+
+// ── ANALYTICS ─────────────────────────────────────
+function renderAna(){
+  const period=parseInt(document.getElementById('aPer').value)||9999;
+  const cutoff=new Date(); cutoff.setDate(cutoff.getDate()-period);
+  const done=S.sessions.filter(s=>s.checkOut&&(period===9999||new Date(s.checkIn)>=cutoff));
+  const active=S.sessions.filter(s=>!s.checkOut);
+  const dow=new Date().getDay();
+  const tot=isHol(new Date())?0:S.trucks.filter(t=>t.days.includes(dow)).length;
+  const avg=done.length?Math.round(done.reduce((a,s)=>a+mdiff(s.checkIn,s.checkOut),0)/done.length):0;
+  document.getElementById('statGrid').innerHTML=`
+    <div class="sc"><div class="sl">Today's trucks</div><div class="sv">${tot}</div><div class="ss">${isHol(new Date())?'Holiday — blocked':'scheduled'}</div></div>
+    <div class="sc"><div class="sl">On dock now</div><div class="sv" style="color:var(--green)">${active.length}</div><div class="ss">checked in</div></div>
+    <div class="sc"><div class="sl">Avg dock time</div><div class="sv">${Math.floor(avg/60)}h ${avg%60}m</div><div class="ss">per session</div></div>
+    <div class="sc"><div class="sl">Total sessions</div><div class="sv">${done.length}</div><div class="ss">completed</div></div>`;
+  const el=document.getElementById('aChart');
+  if(!done.length){ el.innerHTML=`<div class="empty"><i class="ti ti-chart-bar"></i>No completed sessions yet.</div>`; return; }
+  const bt={};
+  done.forEach(s=>{ if(!bt[s.truckId]) bt[s.truckId]={tot:0,cnt:0}; bt[s.truckId].tot+=mdiff(s.checkIn,s.checkOut); bt[s.truckId].cnt++; });
+  const ent=Object.entries(bt).map(([id,v])=>{
+    const t=S.trucks.find(x=>x.id===id);
+    return{name:t?t.name:'?',grp:t?t.group||'':'',avg:Math.round(v.tot/v.cnt),color:t?t.color:'#4361ee',cnt:v.cnt};
+  }).sort((a,b)=>b.avg-a.avg);
+  const mx=Math.max(...ent.map(e=>e.avg),1);
+  el.innerHTML=ent.map(e=>`<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;padding:10px 12px;background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border)">
+    <div style="width:170px;flex-shrink:0;overflow:hidden">
+      <div style="font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.name}</div>
+      <div style="font-size:10px;color:var(--text3)">${e.grp}</div>
+    </div>
+    <div style="flex:1;height:20px;background:var(--bg4);border-radius:4px;overflow:hidden;border:1px solid var(--border)">
+      <div style="width:${Math.round(e.avg/mx*100)}%;height:100%;background:${e.color};border-radius:3px"></div>
+    </div>
+    <div style="width:65px;text-align:right;font-weight:700;font-size:13px">${Math.floor(e.avg/60)}h ${e.avg%60}m</div>
+    <div style="width:52px;text-align:right;font-size:11px;color:var(--text3)">${e.cnt} runs</div>
+  </div>`).join('');
+}
+
+// ── INIT ──────────────────────────────────────────
+initUI();
+setDir('Inbound');
+renderCal();
+setInterval(updStatus, 60000);
+</script>
+</body>
+</html>
