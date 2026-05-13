@@ -1319,22 +1319,44 @@ async function delUser(username){
 }
 
 async function changePassword(){
-  const oldP=document.getElementById('pwOld').value;
-  const newP=document.getElementById('pwNew').value;
-  const confP=document.getElementById('pwConf').value;
-  const errEl=document.getElementById('pwChErr');
+  const oldP  = document.getElementById('pwOld').value;
+  const newP  = document.getElementById('pwNew').value;
+  const confP = document.getElementById('pwConf').value;
+  const errEl = document.getElementById('pwChErr');
   errEl.style.display='none';
   if(!oldP||!newP){ errEl.textContent='Fill in all fields.'; errEl.style.display='block'; return; }
   if(newP.length<6){ errEl.textContent='New password must be at least 6 characters.'; errEl.style.display='block'; return; }
   if(newP!==confP){ errEl.textContent='New passwords do not match.'; errEl.style.display='block'; return; }
   loading(true,'Changing password…');
   try{
-    const oldHash=await sha256(oldP), newHash=await sha256(newP);
-    const res=await api({action:'changePassword',username:currentUser.username,oldHash,newHash});
-    if(res.ok){ document.getElementById('pwOld').value=''; document.getElementById('pwNew').value=''; document.getElementById('pwConf').value='';
-      switchUserTab('list'); alert('Password changed successfully.'); }
-    else{ errEl.textContent=res.error||'Failed.'; errEl.style.display='block'; }
-  }catch(e){ errEl.textContent='Connection error.'; errEl.style.display='block'; }
+    const oldHash = await sha256(oldP);
+    const newHash = await sha256(newP);
+    console.log('changePassword — username:', currentUser.username);
+    console.log('changePassword — oldHash:', oldHash);
+    console.log('changePassword — newHash:', newHash);
+    const res = await api({
+      action:   'changePassword',
+      username: currentUser.username,
+      oldHash,
+      newHash
+    });
+    console.log('changePassword response:', JSON.stringify(res));
+    if(res.ok){
+      document.getElementById('pwOld').value='';
+      document.getElementById('pwNew').value='';
+      document.getElementById('pwConf').value='';
+      errEl.style.display='none';
+      alert('✅ Password changed successfully! Please log in again with your new password.');
+      doLogout();
+    } else {
+      errEl.textContent = res.error||'Failed to change password.';
+      errEl.style.display='block';
+    }
+  } catch(e){
+    console.error('changePassword error:', e);
+    errEl.textContent='Connection error: '+e.message;
+    errEl.style.display='block';
+  }
   loading(false);
 }
 
