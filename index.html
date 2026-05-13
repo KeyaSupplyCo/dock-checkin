@@ -634,11 +634,37 @@ async function loadAllData(){
 }
 
 function parseTruck(t){
+  // Fix days - comes as JSON string from sheets
   if(typeof t.days==='string'){
     try{ t.days=JSON.parse(t.days); }catch(e){ t.days=[]; }
   }
   if(!Array.isArray(t.days)) t.days=[];
   t.days=t.days.map(Number);
+
+  // Fix start/end — Google Sheets may return full date string like
+  // "Sat Dec 30 1899 08:00:00 GMT-0500" — extract just HH:MM
+  function extractTime(val){
+    if(!val) return '00:00';
+    const s = val.toString().trim();
+    // Already HH:MM format
+    if(/^\d{1,2}:\d{2}$/.test(s)) return s.padStart(5,'0').slice(0,5);
+    // Try to parse as date and extract time
+    try{
+      const d = new Date(s);
+      if(!isNaN(d)){
+        const h = d.getHours().toString().padStart(2,'0');
+        const m = d.getMinutes().toString().padStart(2,'0');
+        return `${h}:${m}`;
+      }
+    }catch(e){}
+    // Try regex match for HH:MM anywhere in string
+    const match = s.match(/(\d{1,2}):(\d{2})/);
+    if(match) return `${match[1].padStart(2,'0')}:${match[2]}`;
+    return '00:00';
+  }
+
+  t.start = extractTime(t.start);
+  t.end   = extractTime(t.end);
   return t;
 }
 
@@ -714,9 +740,12 @@ function renderCal(){
       .map(tk=>({...tk,sm:timeToMins(tk.start),em:timeToMins(tk.end)}));
     let evts='';
     trucks.forEach(tk=>{
-      const overlaps=trucks.filter(o=>o.sm<tk.em&&o.em>tk.sm);
-      const col=overlaps.indexOf(tk), cols=overlaps.length;
-      const wPct=100/cols, lPct=col*wPct;
+      // Find trucks that genuinely overlap in time with this truck
+      const overlaps=trucks.filter(o=>o.sm < tk.em && o.em > tk.sm);
+      const col = overlaps.findIndex(o=>o.id===tk.id);
+      const cols = overlaps.length;
+      const wPct = 100/cols;
+      const lPct = col*wPct;
       const top=tk.sm*PX, h=Math.max((tk.em-tk.sm)*PX-2,18);
       const sess=openSess(tk.id,dk);
       const isIn=!!sess, over=isIn&&new Date()>new Date(dk+'T'+tk.end+':00');
